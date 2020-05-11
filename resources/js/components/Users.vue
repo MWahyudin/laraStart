@@ -6,11 +6,7 @@
                     <div class="card-header">
                         <h3 class="card-title">User Table</h3>
                         <div class="card-tools">
-                            <button
-                                class="btn btn-success"
-                                data-toggle="modal"
-                                data-target="#addNewModal"
-                            >
+                            <button class="btn btn-success" @click="newModal">
                                 Add New
                                 <i class="fas fa-user-plus"></i>
                             </button>
@@ -34,27 +30,32 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Name</th>
+                                    <th>Desciption</th>
                                     <th>Email</th>
                                     <th>Type</th>
+                                    <th>Registered At</th>
                                     <th>Modify</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>183</td>
-                                    <td>John Doe</td>
-                                    <td>11-7-2014</td>
+                                <tr v-for="(user, i) in users" :key="user.id">
+                                    <td>{{ i + 1 }}</td>
+                                    <td>{{ user.name }}</td>
+                                    <td>{{ user.bio }}</td>
+                                    <td>{{ user.email }}</td>
                                     <td>
-                                        <span class="tag tag-success"
-                                            >Approved</span
-                                        >
+                                        {{ user.type | upText }}
                                     </td>
+                                    <td>{{ user.created_at | date}}</td>
                                     <td>
-                                        <a href="#">
+                                        <a href="#" @click="editModal(user)">
                                             <i class="fas fa-edit blue"></i>
                                         </a>
                                         |
-                                        <a href="#">
+                                        <a
+                                            href="#"
+                                            @click="deleteUser(user.id)"
+                                        >
                                             <i class="fas fa-trash red"></i>
                                         </a>
                                     </td>
@@ -79,8 +80,19 @@
             <div class="modal-dialog modal-dialog-scrollable" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="addNewModal">
-                            Add new
+                        <h5
+                            class="modal-title"
+                            id="addNewModal"
+                            v-show="!editMode"
+                        >
+                            Add new data
+                        </h5>
+                        <h5
+                            class="modal-title"
+                            id="addNewModal"
+                            v-show="editMode"
+                        >
+                            Edit info
                         </h5>
                         <button
                             type="button"
@@ -91,15 +103,21 @@
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
-                    <form @submit.prevent="createUser">
+                    <form
+                        @submit.prevent="editMode ? updateUser() : createUser()"
+                    >
                         <div class="modal-body">
                             <div class="form-group">
                                 <input
                                     v-model="form.name"
+                                    refs="inputName"
+                                    autofocus
+                                    id="inputName"
                                     placeholder="Name"
                                     type="text"
                                     name="name"
                                     class="form-control"
+                                    autocomplete="off"
                                     :class="{
                                         'is-invalid': form.errors.has('name')
                                     }"
@@ -167,7 +185,7 @@
                             <div class="form-group">
                                 <input
                                     v-model="form.password"
-                                    placeholder="password Address"
+                                    placeholder="Password"
                                     type="password"
                                     name="password"
                                     class="form-control"
@@ -192,8 +210,19 @@
                             >
                                 <i class="fas fa-chevron-circle-left"></i> Close
                             </button>
-                            <button type="submit" class="btn btn-primary">
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                                v-show="!editMode"
+                            >
                                 <i class="fas fa-plus-circle"></i> Create
+                            </button>
+                            <button
+                                type="submit"
+                                class="btn btn-success"
+                                v-show="editMode"
+                            >
+                                <i class="fas fa-edit"></i> Update
                             </button>
                         </div>
                     </form>
@@ -206,7 +235,10 @@
 export default {
     data() {
         return {
+            editMode: false,
+            users: {},
             form: new Form({
+                id: "",
                 name: "",
                 email: "",
                 password: "",
@@ -217,12 +249,134 @@ export default {
         };
     },
     methods: {
+        //delete user
+        deleteUser(id) {
+            btnDelete
+                .fire({
+                    title: "Are you sure?",
+                    text: "You won't be able to revert this!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Yes, delete it!",
+                    cancelButtonText: "No, cancel!",
+                    reverseButtons: true
+                })
+                .then(result => {
+                    if (result.value) {
+                        this.$Progress.start();
+                        //send request to server
+                        this.form.delete("api/user/" + id);
+                        Fire.$emit("afterCreate");
+                        $("#addNewModal").modal("hide");
+                        //send data to api
+                        // salahdisini
+                        btnDelete.fire(
+                            "Deleted!",
+                            "Your file has been deleted.",
+                            "success"
+                        );
+                        this.$Progress.finish();
+                    } else if (
+                        /* Read more about handling dismissals below */
+                        result.dismiss === swal.DismissReason.cancel
+                    ) {
+                        btnDelete.fire(
+                            "Cancelled",
+                            "Your data file is safe :)",
+                            "error"
+                        );
+                    }
+                });
+        },
+        updateUser() {
+            //send http request to api
+            this.form
+                .patch("api/user/" + this.form.id)
+                .then(() => {
+                    this.$Progress.start();
+                    Fire.$emit("afterCreate");
+                    $("#addNewModal").modal("hide");
+                    swal.fire({
+                        position: "top",
+                        icon: "success",
+                        title: "Your date has been updated",
+                        showConfirmButton: false,
+                        timer: 1000
+                    });
+                    this.$Progress.finish();
+                })
+                .catch(() => {});
+        },
+
+        editModal(user) {
+            this.editMode = true;
+            this.form.clear();
+            this.form.reset();
+            $("#addNewModal").modal("show");
+            this.form.fill(user);
+        },
+        newModal() {
+            this.editMode = false;
+            this.form.clear();
+            this.form.reset();
+            $("#addNewModal").modal("show");
+        },
+        LoadUser() {
+            axios.get("api/user").then(({ data }) => (this.users = data.data));
+        },
         createUser() {
-            this.form.post("api/user");
+            this.form
+                .post("api/user")
+                //without arrow function
+                // .post("api/user")
+                // .then(response => {
+                //     this.posts = response.data;
+                //     // toast.
+                //     alert("data has been saved");
+                //     $("#addNewModal").modal("hide");
+                // })
+                // .catch(err => {});
+
+                .then(() => {
+                    // toast.
+                    this.$Progress.start();
+                    Fire.$emit("afterCreate");
+                    $("#addNewModal").modal("hide");
+
+                    toast.fire({
+                        icon: "success",
+                        title: "Data saving successfully"
+                    });
+                    this.$Progress.finish();
+                    // Toast.fire({
+                    //     icon: "success",
+                    //     title: "Signed in successfully"
+                    // });
+                    // toast.fire(
+                    //     "GGreats!!!!",
+                    //     "Data has been Added!",
+                    //     "success"
+                    // );
+                })
+                .catch(() => {});
         }
     },
+    created() {
+        this.LoadUser();
+        Fire.$on("afterCreate", () => {
+            this.LoadUser();
+        });
+        // setInterval(() => this.LoadUser(), 5000);
+    },
     mounted() {
-        console.log("Component mounted.");
+        // Your JQuery code here
+        $(document).ready(function() {
+            $("#addNewModal").on("shown.bs.modal", function() {
+                $(this)
+                    .find("#inputName")
+                    .focus();
+            });
+        });
     }
 };
 </script>

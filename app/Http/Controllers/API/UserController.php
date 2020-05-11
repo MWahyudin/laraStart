@@ -17,6 +17,7 @@ class UserController extends Controller
     public function index()
     {
         //
+        return User::latest()->paginate(10);
     }
 
     /**
@@ -67,6 +68,12 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         //
+        $user = User::findOrFail($id);
+        
+        //Edit User
+        $user->update($request->all());
+
+        return ['message' => 'user edited succesfully'];
     }
 
     /**
@@ -77,6 +84,10 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        //
+        //get id user 
+        $user= User::findOrFail($id);
+
+        //delete user
+        $user->delete();
     }
 }
