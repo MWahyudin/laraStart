@@ -17,7 +17,8 @@ class UserController extends Controller
     public function index()
     {
         //
-        return User::latest()->paginate(10);
+        $users = User::latest()->paginate(10);
+        return $users
     }
 
     /**
@@ -34,16 +35,16 @@ class UserController extends Controller
             'email' => 'required|string|email|max:191|unique:users',
             'password' => 'required|string|min:6|',
             'type' => 'required|not_in:0'
-            
-            
+
+
         ));
-        
+
         return User::create([
         'name' => $request['name'],
         'email' => $request['email'],
         'type' => $request['type'],
         'bio' => $request['bio'],
-        'photo' => $request['photo'],
+        'photo' => 'profile.png',
         'password' => Hash::make($request['password'])
         ]);
     }
@@ -69,7 +70,7 @@ class UserController extends Controller
     {
         //
         $user = User::findOrFail($id);
-        
+
         //Edit User
         $user->update($request->all());
 
@@ -84,7 +85,7 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        //get id user 
+        //get id user
         $user= User::findOrFail($id);
 
         //delete user
