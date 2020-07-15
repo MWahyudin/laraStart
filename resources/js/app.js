@@ -16,7 +16,8 @@ Vue.use(VueProgressBar, {
 Vue.component(HasError.name, HasError);
 Vue.component(AlertError.name, AlertError);
 
-
+//Laravel vue pagination
+Vue.component('pagination', require('laravel-vue-pagination'));
 
 //progress barr
 import VueProgressBar from "vue-progressbar";

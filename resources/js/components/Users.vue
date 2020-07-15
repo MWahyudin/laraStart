@@ -4,7 +4,7 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">User Table</h3>
+                        <h3 class="card-title">User Tableeee</h3>
                         <div class="card-tools">
                             <button class="btn btn-success" @click="newModal">
                                 Add New
@@ -38,15 +38,15 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="(user, i) in users" :key="user.id">
-                                    <td>{{ i + 1 }}</td>
+                                <tr v-for="(user, index) in users.data" :key="index">
+                                    <td>{{ users.current_page == 1 ? index + 1 : users.current_page.toString() + index }}</td>
                                     <td>{{ user.name }}</td>
                                     <td>{{ user.bio }}</td>
                                     <td>{{ user.email }}</td>
                                     <td>
-                                        {{ user.type | upText }}
+                                        {{ user.type }}
                                     </td>
-                                    <td>{{ user.created_at | date}}</td>
+                                    <td>{{ user.created_at | date }}</td>
                                     <td>
                                         <a href="#" @click="editModal(user)">
                                             <i class="fas fa-edit blue"></i>
@@ -62,6 +62,16 @@
                                 </tr>
                             </tbody>
                         </table>
+	<preloader-component
+                        :preloader="preloader">
+        </preloader-component>
+
+
+		<pagination-component
+                    :pagination="users"
+                    v-on:pagi="getUsers"
+                    :offset="offset">
+        </pagination-component>
                     </div>
                     <!-- /.card-body -->
                 </div>
@@ -225,6 +235,7 @@
                                 <i class="fas fa-edit"></i> Update
                             </button>
                         </div>
+
                     </form>
                 </div>
             </div>
@@ -232,11 +243,27 @@
     </div>
 </template>
 <script>
+import PreloaderComponent from '../components/Preloader'
+import PaginationComponent from '../components/Pagination'
+
 export default {
+    components: {
+        PaginationComponent,
+		PreloaderComponent,
+    },
     data() {
         return {
             editMode: false,
-            users: {},
+            users: {
+                  total: 0,
+                per_page: 10,
+                from: 1,
+                to: 0,
+                current_page: 1,
+                data: []
+            },
+              offset: 10, // Total Items por page (default)
+            preloader: false, // Is Preloader is runing
             form: new Form({
                 id: "",
                 name: "",
@@ -321,8 +348,28 @@ export default {
             this.form.reset();
             $("#addNewModal").modal("show");
         },
+          getUsers (page) {
+			this.preloader = true
+this.users.current_page = page
+			axios.get(`api/user?page=${this.users.current_page}`)
+				.then(response => {
+					this.users = response.data
+				}, error => {
+					console.log(error)
+				})
+				.finally(() => this.preloader = false)
+		},
         LoadUser() {
-            axios.get("api/user").then(({ data }) => (this.users = data.data));
+            this.preloader = true
+            axios.get(`api/user?page=${this.users.current_page}`)
+            // .then(({ data }) => (this.users = data.data));
+            	.then(response => {
+					console.log(response)
+					this.users = response.data
+				}, error => {
+					console.log(error)
+				})
+				.finally(() => this.preloader = false)
         },
         createUser() {
             this.form
@@ -362,7 +409,7 @@ export default {
         }
     },
     created() {
-        this.LoadUser();
+        this.getUsers();
         Fire.$on("afterCreate", () => {
             this.LoadUser();
         });
